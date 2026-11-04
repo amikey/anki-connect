@@ -6,7 +6,7 @@
 
 import anki
 import anki.utils
-from ..utils.deck_helpers import get_direct_child_decks, get_deck_limits, update_parent_deck_silent
+from ..utils.deck_helpers import get_direct_child_decks, get_deck_limits, update_parent_deck_silent, assert_card_in_deck
 
 class StudyManager:
     """Manages card studying and review functionality"""
@@ -141,7 +141,7 @@ class StudyManager:
             'lastAnsweredCardId': last_answered
         }
     
-    def answerCard(self, cardId, ease, timeTakenSeconds=None):
+    def answerCard(self, cardId, ease, timeTakenSeconds=None, deckName=None):
         """
         Answer a card with the specified ease.
 
@@ -172,6 +172,9 @@ class StudyManager:
             ease (int): Ease/difficulty rating (1=Again, 2=Hard, 3=Good, 4=Easy)
             timeTakenSeconds (float, optional): Time taken to answer in seconds.
                                                Defaults to 0 if not provided.
+            deckName (str, optional): Parent deck name. If provided, the card must
+                                      belong to this deck or one of its subdecks,
+                                      otherwise the answer is rejected.
 
         Returns:
             bool: True if successful
@@ -189,6 +192,9 @@ class StudyManager:
         deck_id = collection.db.scalar("SELECT did FROM cards WHERE id = ?", cardId)
         if deck_id is None:
             raise Exception(f"Card with ID '{cardId}' does not exist")
+
+        if deckName:
+            assert_card_in_deck(collection, cardId, deck_id, deckName)
 
         from anki.scheduler.v3 import CardAnswer
 
@@ -877,17 +883,7 @@ class StudyManager:
 
         # If deckName provided, validate the card belongs to that deck or a subdeck
         if deckName:
-            # Verify the parent deck exists
-            parent_deck = collection.decks.by_name(deckName)
-            if parent_deck is None:
-                raise Exception(f"Deck '{deckName}' does not exist")
-
-            card_deck_name = collection.decks.get(card.did)['name']
-            if card_deck_name != deckName and not card_deck_name.startswith(deckName + '::'):
-                raise Exception(
-                    f"Card '{cardId}' does not belong to deck '{deckName}' or its subdecks "
-                    f"(card is in '{card_deck_name}')"
-                )
+            assert_card_in_deck(collection, cardId, card.did, deckName)
 
         # Find the most recent revlog entry for this card
         revlog_entry = collection.db.first(

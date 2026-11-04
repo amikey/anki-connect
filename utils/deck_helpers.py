@@ -130,3 +130,22 @@ def update_parent_deck_silent(collection, parent_name, new_cards_total, reviews_
     except Exception:
         # Silently fail - don't interrupt the main operation
         pass
+
+
+def assert_card_in_deck(collection, card_id, card_did, deck_name):
+    """
+    Raise unless the card is in deck_name or one of its subdecks.
+
+    Card ids are global across every student's decks, so the deckName the API
+    builds from its caller is the only ownership check.
+    """
+    parent_deck = collection.decks.by_name(deck_name)
+    if parent_deck is None:
+        raise Exception(f"Deck '{deck_name}' does not exist")
+
+    card_deck_name = collection.decks.get(card_did)['name']
+    if card_deck_name != deck_name and not card_deck_name.startswith(deck_name + '::'):
+        raise Exception(
+            f"Card '{card_id}' does not belong to deck '{deck_name}' or its subdecks "
+            f"(card is in '{card_deck_name}')"
+        )

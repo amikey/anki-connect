@@ -9,6 +9,7 @@ This directory contains tests for the AnkiConnect plugin.
 - `test_decks.py` - Tests for deck-related API endpoints
 - `test_misc.py` - Tests for miscellaneous API functionality
 - `test_answer_card.py` - Tests for the answerCard API with timeTakenSeconds parameter
+- `test_deck_ownership.py` - answerCard, flagCard and unflagCard refuse a card outside the given deckName
 
 ### Utility Files
 

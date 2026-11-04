@@ -46,20 +46,21 @@ except ImportError:
 try:
     from .utils import (
         makeBytes, makeStr, download, verifyString, verifyStringList,
-        getMimeType, audioInject, AjaxServer, ConfigManager
+        getMimeType, audioInject, AjaxServer, ConfigManager, assert_card_in_deck
     )
 except ImportError:
     # Fallback for older Python versions or different import contexts
     try:
         from utils import (
             makeBytes, makeStr, download, verifyString, verifyStringList,
-            getMimeType, audioInject, AjaxServer, ConfigManager
+            getMimeType, audioInject, AjaxServer, ConfigManager, assert_card_in_deck
         )
     except ImportError:
         # Final fallback - define locally
         from utils.helpers import makeBytes, makeStr, download, verifyString, verifyStringList, getMimeType, audioInject
         from utils.network import AjaxServer
         from utils.config_manager import ConfigManager
+        from utils.deck_helpers import assert_card_in_deck
 
 
 
@@ -507,8 +508,8 @@ class AnkiBridge:
         return suspended
 
 
-    def flagCard(self, cardId):
-        """Flag a card with red flag (flag value 1)"""
+    def flagCard(self, cardId, deckName=None):
+        """Flag a card with red flag (flag value 1); with deckName, only a card in that deck or a subdeck"""
         collection = self.collection()
         if collection is None:
             return False
@@ -516,6 +517,8 @@ class AnkiBridge:
         card = collection.get_card(cardId)
         if card is None:
             raise Exception(f"Card with ID '{cardId}' does not exist")
+        if deckName:
+            assert_card_in_deck(collection, cardId, card.did, deckName)
 
         # No startEditing()/stopEditing() wrapper: requireReset() prints a stack
         # trace and forces a full UI reset on EVERY call (the obsolete path
@@ -527,8 +530,8 @@ class AnkiBridge:
         return True
 
 
-    def unflagCard(self, cardId):
-        """Remove flag from a card (set flag value to 0)"""
+    def unflagCard(self, cardId, deckName=None):
+        """Remove flag from a card (set flag value to 0); with deckName, only a card in that deck or a subdeck"""
         collection = self.collection()
         if collection is None:
             return False
@@ -536,6 +539,8 @@ class AnkiBridge:
         card = collection.get_card(cardId)
         if card is None:
             raise Exception(f"Card with ID '{cardId}' does not exist")
+        if deckName:
+            assert_card_in_deck(collection, cardId, card.did, deckName)
 
         # No startEditing()/stopEditing() wrapper — see flagCard. card.flush()
         # persists directly; the legacy wrapper only spammed requireReset().
@@ -2045,8 +2050,8 @@ class AnkiConnect:
         return StudyManager(self.anki).getNextReviewCard(deckName, needRender)
 
     @webApi()
-    def answerCard(self, cardId, ease, timeTakenSeconds=None):
-        return StudyManager(self.anki).answerCard(cardId, ease, timeTakenSeconds)
+    def answerCard(self, cardId, ease, timeTakenSeconds=None, deckName=None):
+        return StudyManager(self.anki).answerCard(cardId, ease, timeTakenSeconds, deckName)
 
     @webApi()
     def resetCard(self, cardId):
@@ -2073,30 +2078,32 @@ class AnkiConnect:
         return StudyManager(self.anki).getDeckTimeStats(deckName, period)
 
     @webApi()
-    def flagCard(self, cardId):
+    def flagCard(self, cardId, deckName=None):
         """
         Flag a card with red flag
         
         Args:
             cardId (int): ID of the card to flag
+            deckName (str, optional): Reject a card outside this deck and its subdecks
             
         Returns:
             bool: True if successful
         """
-        return self.anki.flagCard(cardId)
+        return self.anki.flagCard(cardId, deckName)
 
     @webApi()
-    def unflagCard(self, cardId):
+    def unflagCard(self, cardId, deckName=None):
         """
         Remove flag from a card
         
         Args:
             cardId (int): ID of the card to unflag
+            deckName (str, optional): Reject a card outside this deck and its subdecks
             
         Returns:
             bool: True if successful
         """
-        return self.anki.unflagCard(cardId)
+        return self.anki.unflagCard(cardId, deckName)
 
     @webApi()
     def isCardFlagged(self, cardId):
