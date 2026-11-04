@@ -98,9 +98,9 @@ nice -n 19 ionice -c3 rclone copy "$BACKUP_FILE" "$REMOTE" \
     --log-file="$BACKUP_DIR/anki_backup_$TIMESTAMP.log"
 
 # ----------------------------
-# 5. Retention: keep last 7 backups locally
+# 5. Retention: keep last 2 days of backups locally (older ones live in Spaces)
 # ----------------------------
-find "$BACKUP_DIR" -maxdepth 1 -type f -name 'anki_backup_*.tar*' -mtime +7 -delete
+find "$BACKUP_DIR" -maxdepth 1 -type f -name 'anki_backup_*.tar*' -mtime +1 -delete
 
 # Optional remote retention (rclone v1.71+):
 # rclone delete "$REMOTE" --min-age 7d --s3-no-check-bucket --s3-acl private
